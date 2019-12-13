@@ -277,7 +277,7 @@ module ManageIQ::Providers::Redhat::InfraManager::OvirtServices
         # Retrieve the current representation of the virtual machine:
         # mandatory for memory parameters and to check if next_run_configuration_exists
 
-        vm = vm_service.get
+        vm = vm_service.get(:all_content => true)
         new_vm_specs = {}
 
         # Update the memory:
@@ -305,7 +305,7 @@ module ManageIQ::Providers::Redhat::InfraManager::OvirtServices
 
         # Add disks:
         added_disk_specs = spec['disksAdd']
-        add_vm_disks(vm_service, added_disk_specs) if added_disk_specs
+        add_vm_disks(vm_service, added_disk_specs, vm.virtio_scsi.enabled) if added_disk_specs
       end
 
       _log.info("#{log_header} Completed.")
@@ -844,11 +844,12 @@ module ManageIQ::Providers::Redhat::InfraManager::OvirtServices
     # @param vm_service [OvirtSDK4::VmsService] The service that manages the virtual machine.
     # @param disk_specs [Hash] The specification of the disks to add.
     #
-    def add_vm_disks(vm_service, disk_specs)
+    def add_vm_disks(vm_service, disk_specs, virtio_scsi_enabled)
       storage_spec = disk_specs[:storage]
       attachments_service = vm_service.disk_attachments_service
       disk_specs[:disks].each do |disk_spec|
-        attachment = prepare_vm_disk_attachment(disk_spec, storage_spec)
+        attachment = prepare_vm_disk_attachment(disk_spec.merge(:virtio_scsi_enabled => virtio_scsi_enabled), 
+                                                storage_spec)
         attachments_service.add(attachment)
       end
     end
@@ -866,7 +867,8 @@ module ManageIQ::Providers::Redhat::InfraManager::OvirtServices
         :storage          => storage_spec,
         :name             => disk_spec[:disk_name],
         :thin_provisioned => disk_spec[:thin_provisioned],
-        :bootable         => disk_spec[:bootable]
+        :bootable         => disk_spec[:bootable],
+        :virtio_scsi_enabled => disk_spec[:virtio_scsi_enabled]
       )
       attachment_builder.disk_attachment
     end

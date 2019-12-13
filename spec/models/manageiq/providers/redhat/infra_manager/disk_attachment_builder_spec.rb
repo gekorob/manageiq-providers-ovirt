@@ -52,6 +52,38 @@ describe ManageIQ::Providers::Redhat::InfraManager::DiskAttachmentBuilder do
 
       expect(builder.disk_attachment).to eq(expected_disk_attachment)
     end
+
+    context 'virtio_scsi' do
+      context 'support not specified' do
+        it 'undeclared interface' do
+          builder = described_class.new(:size_in_mb => 10, :storage => storage, :name => "disk-1",
+                                        :thin_provisioned => true, :bootable => true)
+
+          expect(builder.disk_attachment).to include(:interface => 'VIRTIO')
+        end
+      end
+
+      context 'supported' do
+        it 'undeclared interface' do
+          builder = described_class.new(:size_in_mb => 10, :storage => storage, :name => "disk-1",
+                                        :thin_provisioned => true, :bootable => true, 
+                                        :virtio_scsi_enabled => true)
+          
+          expect(builder.disk_attachment).to include(:interface => 'virtio_scsi')
+        end
+      end
+
+      context 'unsupported' do
+        it 'undeclared interface' do
+          builder = described_class.new(:size_in_mb => 10, :storage => storage, :name => "disk-1",
+                                        :thin_provisioned => true, :bootable => true, 
+                                        :virtio_scsi_enabled => false)
+          
+          expect(builder.disk_attachment).to include(:interface => 'VIRTIO')
+        end
+      end
+    end
+
   end
 
   describe ManageIQ::Providers::Redhat::InfraManager::DiskAttachmentBuilder::BooleanParameter do
