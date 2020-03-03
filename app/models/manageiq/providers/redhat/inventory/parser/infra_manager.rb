@@ -17,12 +17,21 @@ class ManageIQ::Providers::Redhat::Inventory::Parser::InfraManager < ManageIQ::P
 
   def networks
     collector.networks.each do |network|
-      persister_switches = id_of_external_network?(network.id) ? persister.external_distributed_virtual_switches : persister.distributed_virtual_switches
+      is_external = id_of_external_network?(network.id)
+      persister_switches = is_external ? persister.external_distributed_virtual_switches : persister.distributed_virtual_switches
+
+      attrs_to_assign = {
+        :name    => network.name,
+        :uid_ems => network.id
+      }
+
+      if is_external
+        ems_ref = ManageIQ::Providers::Redhat::InfraManager.make_ems_ref(network.data_center.href)
+        attrs_to_assign[:datacenter] = persister.datacenters.lazy_find(ems_ref)
+      end
+
       persister_switches.find_or_build_by(:uid_ems => network.id)
-               .assign_attributes(
-                 :name    => network.name,
-                 :uid_ems => network.id
-               )
+               .assign_attributes(attrs_to_assign)
     end
   end
 
